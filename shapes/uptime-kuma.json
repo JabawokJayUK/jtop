@@ -1,0 +1,6 @@
+{
+  "kind": "docker_health",
+  "match": [
+    "uptime-kuma"
+  ]
+}

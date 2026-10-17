@@ -1,0 +1,12 @@
+{
+  "kind": "http_json",
+  "port": 8096,
+  "path": "/Sessions",
+  "match": [
+    "jellyfin"
+  ],
+  "template": "{n} session(s)",
+  "fields": {
+    "n": "[].Id"
+  }
+}

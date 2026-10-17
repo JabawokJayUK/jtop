@@ -1,0 +1,12 @@
+{
+  "kind": "http_json",
+  "port": 3000,
+  "path": "/api/v1/version",
+  "match": [
+    "gitea"
+  ],
+  "template": "v{v}",
+  "fields": {
+    "v": "version"
+  }
+}
