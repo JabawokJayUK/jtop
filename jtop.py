@@ -966,6 +966,22 @@ def discover(cfg, write=None):
                                       "  ports %s" % ports if ports else ""))
         print("    see shapes/README.md for the format")
     blob = json.dumps(out, indent=2, sort_keys=True)
+    # An empty probe list is a destructive thing to hand someone: written to a
+    # config it REPLACES the built-in list wholesale and silently empties the
+    # DETAIL column. Discovery finding nothing nearly always means docker was
+    # unreachable, not that the host genuinely has no apps -- so refuse to
+    # suggest or write it.
+    if not out.get("detail"):
+        print("\nnothing discovered, so there is no config worth writing.")
+        print("a config with an empty probe list would REPLACE the built-in")
+        print("one and leave the DETAIL column blank.")
+        if not containers:
+            print("docker returned no containers: re-run with sudo, since")
+            print("listing containers needs access to the docker socket.")
+        if write:
+            print("refusing to write %s" % write)
+            return 1
+        return 1
     if write:
         d = os.path.dirname(os.path.expanduser(write))
         if d:

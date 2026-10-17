@@ -46,7 +46,7 @@ data — see [Demo mode](#demo-mode).)*
 One file, no packaging:
 
 ```
-curl -O https://raw.githubusercontent.com/USER/jtop/main/jtop.py
+curl -O https://raw.githubusercontent.com/JabawokJayUK/jtop/main/jtop.py
 chmod +x jtop.py
 ./jtop.py
 ```
