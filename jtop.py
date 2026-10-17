@@ -21,6 +21,11 @@ Panels:
   * DETAIL column: what each app is actually doing (ollama's resident
     model, Plex sessions + hwaccel, *arr queues, SAB speed)
 
+Runs unprivileged: CPU, memory, the whole GPU pane including per-container
+VRAM, and the container tree need no privileges. Root adds the CONSOLE box
+(kernel.dmesg_restrict blocks dmesg), --hush, and the app states whose API
+keys are root-only; --discover needs the Docker socket.
+
 Nothing host-specific is hardcoded below the configuration block: paths,
 cgroup roots and ports live in DEFAULT_CONFIG and can be overridden from a
 JSON file. Run --dump-config to get a starting point.

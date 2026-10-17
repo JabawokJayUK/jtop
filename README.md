@@ -51,10 +51,11 @@ chmod +x jtop.py
 ./jtop.py
 ```
 
-Then let it work out what you are running:
+Then let it work out what you are running. This one needs the Docker socket,
+so it usually wants root:
 
 ```
-./jtop.py --discover
+sudo ./jtop.py --discover
 ```
 
 That prints a report — which containers matched, which ports answered, what
@@ -62,11 +63,11 @@ it could not reach — and a config you can save. It writes nothing unless you
 ask:
 
 ```
-./jtop.py --discover=~/.config/jtop/config.json
+sudo ./jtop.py --discover=~/.config/jtop/config.json
 ```
 
-Run it as root (or with working `sudo -n`) for the CONSOLE box, which needs
-the kernel ring buffer.
+jtop itself runs fine as an ordinary user; root adds the CONSOLE box and the
+app states that need API keys. See [Privileges](#privileges).
 
 ## Why it exists
 
@@ -207,11 +208,33 @@ Config search order, first match wins: `$JTOP_CONFIG`,
 - Linux with cgroup v2 (container tree)
 - Python 3.9+ — standard library only
 - `nvidia-smi` for the GPU pane (absent = pane hidden)
-- `docker` for container names and healthchecks
-- root or `sudo -n` for the CONSOLE box
+- `docker` for healthchecks and `log_tail` shapes
 
-Everything degrades: no GPU, no ZFS, no Docker, no root — the panels that
-cannot work disappear rather than erroring.
+Everything degrades: no GPU, no ZFS, no Docker, no root — a panel that cannot
+work disappears rather than erroring.
+
+## Privileges
+
+jtop runs as an ordinary user and does not need root. On TrueNAS SCALE the
+local console logs you in as root anyway, so this mostly matters when running
+it over SSH.
+
+Unprivileged you still get the CPU meters, the memory split, the full GPU
+pane including per-process VRAM attributed to containers, the container tree,
+and any app whose port answers without a key.
+
+Root (or passwordless `sudo -n`) adds four things:
+
+| Needs privilege | Why | Without it |
+|---|---|---|
+| CONSOLE box | `dmesg` is blocked by `kernel.dmesg_restrict=1`, the TrueNAS default | box stays empty |
+| `--hush` | writes `/proc/sys/kernel/printk` | flag has no effect |
+| API-key apps | keys live in app config files readable only by root | `healthy` from the healthcheck instead of queue depth or session state |
+| ZFS pool line | `zpool` lives in `/usr/sbin`, normally off a non-root `PATH` | ARC figures still shown, pool line omitted |
+
+The container tree itself does *not* need the Docker socket — names and VRAM
+come from `/proc` cgroups. `--discover` and `log_tail` shapes do, since both
+call `docker` directly.
 
 ## Licence
 
