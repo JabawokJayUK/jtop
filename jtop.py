@@ -11,7 +11,7 @@ Zero dependencies: Python 3.9+ stdlib only (curses, threading, subprocess).
 Panels:
   * per-core CPU meters
   * one combined line: CPU total + memory split into apps / ZFS ARC / cache /
-    free  (htop lies about this)
+    free, so reclaimable ARC is not counted as used
   * GPU: one line per card - util bar, VRAM bar, temp, power, clocks, fan,
     P-state.  Per-process VRAM is attributed to the owning *container* in the
     tree's VRAM column, not a bare PID
@@ -33,11 +33,14 @@ no shape still show their docker HEALTHCHECK verdict. Run --discover to
 write a config for what is actually running here.
 
 Keys:
-  up/down,PgUp/PgDn,Home/End  move      enter/space  expand/collapse
-  c/m/n  sort cpu/mem/name              a  expand all     z  collapse all
-  /      filter by name                 esc  clear filter
-  +/-    refresh interval               l  console box   [ / ]  box size
-  ^L     force full repaint             q  quit          h  help
+  up/down or j/k   move             enter/space/left/right  expand/collapse
+  PgUp/PgDn        page             Home/End                first/last
+  c/m/n            sort by cpu/mem/name
+  a / z            expand all / collapse all
+  /                filter by name   esc  clear filter, else quit
+  +/-              refresh -/+ 0.5s (0.5s-10s)
+  l                CONSOLE box      [ / ]  box 1-20 rows
+  ^L               full repaint     h or ?  help      q  quit
 
 Options:
   <secs>          refresh interval (default 2)
@@ -51,10 +54,13 @@ Options:
   --discover      probe the running containers, report which shapes match and
                   which ports/keys actually answer, and print a config you
                   can save. Writes nothing by itself.
+  --discover=FILE as above, but write the config to FILE.
   --list-shapes   list known shapes and the kind each uses.
-  --hush   while running, stop the kernel printing to the physical console
-           (console_loglevel -> 3). Messages still appear in the CONSOLE box.
-           Restored on a clean exit; a SIGKILL leaves it lowered.
+  --hush          while running, stop the kernel printing to the physical
+                  console (console_loglevel -> 3). Messages still appear in
+                  the CONSOLE box. Restored on a clean exit; a SIGKILL
+                  leaves it lowered.
+  -h, --help      print this text and exit.
 """
 
 import calendar
@@ -1081,12 +1087,10 @@ class AppDetails(threading.Thread):
     def _port(self, sh):
         """The port to probe for this shape.
 
-        A shape's port is the project's upstream default, which is wrong the
-        moment an orchestrator reassigns it - and worse, may belong to a
-        DIFFERENT app (sabnzbd and searxng both default to 8080), which would
-        report one app's state under another's name. So: if the container
-        publishes the shape's port, use it; if it publishes exactly one port,
-        trust that; otherwise fall back to the default.
+        Resolution order: the shape's port if the container publishes it, else
+        its sole published port, else the shape's port as a default. Upstream
+        defaults collide across projects (sabnzbd and searxng both use 8080),
+        so a published port is always preferred. pinned_port skips all of this.
         """
         want = sh.get("port")
         if sh.get("_pinned"):
@@ -2601,32 +2605,32 @@ class App:
         lines = [
             "jtop - workload-aware system monitor",
             "",
-            "  up/down, PgUp/PgDn, Home/End   move selection",
-            "  enter / space                  expand or collapse a container",
+            "  up/down or j/k                 move selection",
+            "  PgUp/PgDn, Home/End            page, first, last",
+            "  enter/space/left/right         expand or collapse a container",
             "  a / z                          expand all / collapse all",
             "  c / m / n                      sort by CPU / memory / name",
-            "  /                              filter by name (esc clears)",
-            "  + / -                          faster / slower refresh",
+            "  /                              filter by name",
+            "  esc                            clear the filter, else quit",
+            "  + / -                          refresh -/+ 0.5s (0.5s-10s)",
             "  l                              show/hide the CONSOLE box",
-            "  [ / ]                          console box smaller / bigger",
+            "  [ / ]                          CONSOLE box 1-20 rows",
             "  ctrl-L                         force a full repaint",
             "  h or ?                         this help",
-            "  q or ESC                       quit",
+            "  q                              quit",
             "",
             "Memory bar segments:",
             "  green=apps  magenta=ZFS ARC  blue=page cache  empty=free",
-            "  ARC is reclaimable - htop counts it as 'used', which is why",
-            "  this box looks permanently full there and does not here.",
+            "  ARC is reclaimable: it shrinks under memory pressure, so it is",
+            "  shown separately from memory the kernel cannot hand back.",
             "",
-            "VRAM is read from nvidia-smi and mapped to the owning container",
-            "via /proc/<pid>/cgroup, so GPU use is attributed to the app -",
-            "see the tree's VRAM column, which is sortable with m.",
+            "VRAM comes from nvidia-smi, mapped to the owning container via",
+            "/proc/<pid>/cgroup. The tree's VRAM column is sortable with m.",
             "",
-            "CONSOLE box: the kernel prints to this same physical console, on",
-            "top of curses, which is what leaves stale text behind. The box",
-            "shows those messages where the UI controls the cells, and any",
-            "new message triggers a full-screen repaint. Run with --hush to",
-            "stop the kernel writing to the console while jtop is up.",
+            "CONSOLE box: the kernel prints to the same physical console that",
+            "curses is drawing on. The box gives those messages a region the",
+            "UI owns, and repaints the screen when one arrives. --hush stops",
+            "the kernel writing to the console while jtop is up.",
             "",
             "press any key to return",
         ]

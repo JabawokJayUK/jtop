@@ -128,9 +128,10 @@ Liveness by status code only. `label` is the text shown.
 ### `docker_health`
 
 The container's own `HEALTHCHECK` verdict. No port, no key, no API knowledge.
-The cheapest useful signal there is — and it is already the automatic
-fallback for any container whose shape returns nothing, so you rarely need to
-ask for it explicitly.
+
+This is already the automatic fallback for any container whose shape returns
+nothing, so declare it explicitly only when you want the healthcheck *instead*
+of a probe rather than as a backstop.
 
 ### `log_tail`
 
@@ -141,14 +142,15 @@ Last line matching `pattern` from `docker logs`.
   "pattern": "(Extracted|Extracting|Queue|error)" }
 ```
 
-**Use this only when an app has no API.** Log text is not a stable
-interface: wording changes in point releases and nobody considers that
-breaking. It is also *history, not state* — the newest line may be hours
-old, so jtop always prefixes the age (`4h10m ago …`) precisely so a stale
-message cannot masquerade as current. It needs the Docker socket, so it is
-also the most privileged option.
+**Use this only when an app has no API.** Three limitations, in order of
+how often they bite:
 
-If an app has a status endpoint, use `http_json` instead.
+- Log text is not a stable interface — wording changes in point releases.
+- A log line is history, not state. The newest match may be hours old, so
+  jtop prefixes the age (`4h10m ago …`).
+- It requires access to the Docker socket.
+
+If the app has a status endpoint, use `http_json`.
 
 ### `command`
 

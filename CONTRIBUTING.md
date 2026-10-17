@@ -19,31 +19,25 @@ upstream default is the right thing to write down.
 
 ## Adding a kind
 
-A new `kind` is a change to `jtop.py` and needs more justification: it means
-the shape language could not express something. Say what you tried first. If
-the answer is "the app has no API", that is `log_tail` — see below.
+A new `kind` changes `jtop.py`, so it needs a reason the shape language could
+not express it. Say what you tried first. There are 13 kinds; five are generic
+(`http_json`, `http`, `docker_health`, `log_tail`, `command`) and cover most
+apps.
 
-## Logs are a last resort
-
-`log_tail` exists for apps with no API at all. It is a fallback, not a
-shortcut:
-
-* Log wording is not a stable interface. It changes in point releases and
-  nobody treats that as breaking.
-* A log line is *history, not state*. The newest line may be hours old, which
-  is why jtop always prefixes the age.
-* It needs the Docker socket, so it is more privileged than an HTTP probe.
-
-If the app has a status endpoint, use `http_json`.
+If the app simply has no API, that is `log_tail` — a last resort, with the
+reasons documented in
+[shapes/README.md](shapes/README.md#log_tail).
 
 ## Style
 
 * Standard library only. No dependencies, ever — this has to run on a
   console with no package manager available.
 * Python 3.9 compatible.
-* A failing probe must return `None`, never raise. Someone running a
-  different version of an app should see a blank cell, not a traceback.
+* A failing probe must return `None`, never raise. Running a different
+  version of an app should give a blank cell, not a traceback.
 * Keep DETAIL output under ~60 characters; it shares a row with the tree.
+* Comments describe what the code does and the invariants it holds — not the
+  bug that prompted the change. That belongs in the commit message.
 
 ## Testing a UI change
 

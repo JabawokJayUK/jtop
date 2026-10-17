@@ -72,9 +72,9 @@ the kernel ring buffer.
 
 Four things conventional monitors get wrong on a container host:
 
-**Memory.** On ZFS, ARC shows up as "used" and panics you into buying RAM you
-do not need. jtop splits memory into apps / ARC / cache / free, because ARC
-gives memory back under pressure and the others do not.
+**Memory.** On ZFS, the ARC counts as "used", so a host with 27 GB of cache
+looks full when most of it is reclaimable. jtop splits memory into apps / ARC
+/ cache / free: ARC shrinks under pressure, application memory does not.
 
 **VRAM.** `nvidia-smi` reports VRAM per PID. On a container host a PID is
 meaningless — you want to know which *app* is holding 9 GB. jtop resolves
@@ -94,7 +94,7 @@ while jtop runs, and restores the previous loglevel on exit.
 
 ## The DETAIL column: kinds and shapes
 
-This is the part worth understanding, and the part designed for contribution.
+This is where new apps get added, and it is deliberately not Python.
 
 - A **kind** is a parser, written in Python: `http_json`, `http`,
   `docker_health`, `log_tail`, `command`, plus a few app-specific ones. There
@@ -132,7 +132,7 @@ A shape's `port` is the project's documented default. jtop prefers the port
 *different* app. SABnzbd and SearXNG both default to 8080; probing blindly
 would report one app's state under the other's name.
 
-### Keys
+### API keys
 
 Some apps need an API key. `app_config_root` points at the parent of your app
 config trees, and each shape says where its key lives:
@@ -167,14 +167,19 @@ file opens, process spawns and socket connects:
 (Only paths that could identify a host are counted — `/proc`, cgroups, the
 app config root, `/dev/kmsg`. Terminfo and Python's own imports are ignored.)
 
-## Keys
+## Keyboard
 
 ```
-up/down,PgUp/PgDn,Home/End  move      enter/space  expand/collapse
-c/m/n  sort cpu/mem/name              a  expand all     z  collapse all
-/      filter by name                 esc  clear filter
-+/-    refresh interval               l  console box   [ / ]  box size
-^L     force full repaint             q  quit          h  help
+up/down or j/k   move            enter/space/left/right   expand/collapse
+PgUp/PgDn        page            Home/End                 first/last
+c/m/n            sort by cpu/mem/name
+a / z            expand all / collapse all
+/                filter by name  esc   clear filter, or quit if none set
++/-              interval -/+ 0.5s, between 0.5s and 10s
+l                show/hide the CONSOLE box
+[ / ]            CONSOLE box 1-20 rows
+^L               force a full repaint
+h or ?           help            q     quit
 ```
 
 The `/` filter matches container names *and* the processes inside them, so
@@ -191,6 +196,7 @@ The `/` filter matches container names *and* the processes inside them, so
 --dump-config   print the effective config as JSON
 --config FILE   use FILE instead of the search path
 --hush          stop the kernel printing to the console while jtop runs
+-h, --help      print this list and exit
 ```
 
 Config search order, first match wins: `$JTOP_CONFIG`,
