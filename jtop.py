@@ -632,11 +632,9 @@ class CgroupSampler:
 # A "shape" is DATA describing one app: which kind to use, which port and
 # path, which field or pattern to pull out. Shapes live in JSON - embedded in
 # BUILTIN_SHAPES below so the single-file install keeps working, and loadable
-# from a shapes/ directory so people can add apps without touching code.
+# from a shapes/ directory, which overrides a built-in of the same name.
 #
-# Adding support for a new app should be a JSON file and a pull request, not
-# a patch to this module. If you find yourself wanting a new kind, that is a
-# signal the shape language is missing something - say so in the PR.
+# See CONTRIBUTING.md before adding a kind.
 # --------------------------------------------------------------------------
 
 def dig(obj, path):
@@ -647,7 +645,7 @@ def dig(obj, path):
         queue.totalRecords      -> obj["queue"]["totalRecords"]
         records[].title         -> obj["records"][0]["title"]
         items[2].name           -> obj["items"][2]["name"]
-    Returns None for any missing link rather than raising, because a shape
+    Returns None for any missing link rather than raising, since a shape
     describing an app version you do not run must degrade to a blank cell.
     """
     cur = obj
@@ -966,11 +964,9 @@ def discover(cfg, write=None):
                                       "  ports %s" % ports if ports else ""))
         print("    see shapes/README.md for the format")
     blob = json.dumps(out, indent=2, sort_keys=True)
-    # An empty probe list is a destructive thing to hand someone: written to a
-    # config it REPLACES the built-in list wholesale and silently empties the
-    # DETAIL column. Discovery finding nothing nearly always means docker was
-    # unreachable, not that the host genuinely has no apps -- so refuse to
-    # suggest or write it.
+    # Config keys replace their built-in counterpart rather than merging, so
+    # an empty probe list is a valid config meaning "no DETAIL column".
+    # Never emit one from a failed scan.
     if not out.get("detail"):
         print("\nnothing discovered, so there is no config worth writing.")
         print("a config with an empty probe list would REPLACE the built-in")
@@ -1104,12 +1100,10 @@ class AppDetails(threading.Thread):
         return want or 80
 
     def _get(self, url, headers=None, timeout=None):
-        """GET, or None if the app is not there.
+        """GET and return the response body, or None if unreachable.
 
-        An absent app is the normal case - most people run a handful of the
-        known shapes - so "connection refused" is not an error worth raising.
-        poll() guards against exceptions too, but returning None keeps a kind
-        usable when a contributor calls it directly to test a shape.
+        Returns None rather than raising: an absent app is the normal case,
+        and kinds are expected to be callable in isolation.
         """
         req = urllib.request.Request(url, headers=headers or {})
         try:
@@ -1668,11 +1662,9 @@ class AppDetails(threading.Thread):
 # --------------------------------------------------------------------------
 # demo mode
 #
-# --demo replaces every sampler with a synthetic one. Nothing here reads the
-# host: no /proc, no nvidia-smi, no docker socket, no API calls. It exists so
-# the README screenshots are reproducible on any machine, and so the layout
-# can be exercised without a GPU or a container stack. All names, models and
-# messages below are invented.
+# --demo swaps every sampler for a synthetic one. Reads nothing: no /proc,
+# no nvidia-smi, no docker, no network. Hosts, cards, models and messages
+# below are invented. Deterministic for a given DEMO_SEED.
 # --------------------------------------------------------------------------
 DEMO_SEED = 20261017
 
